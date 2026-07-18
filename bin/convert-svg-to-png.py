@@ -1,104 +1,101 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
+"""
+Convert SVGs in an input directory to PNGs in an output directory, sized to fit
+within MAX_WIDTH x MAX_HEIGHT while preserving aspect ratio. PNGs in the input
+directory are passed through ImageMagick to be resized to the same bounds.
 
-import getopt
+Renderers (searched on PATH):
+  - SVG -> PNG : inkscape
+  - PNG resize : magick (ImageMagick v7)
+"""
+
+import argparse
 import os
-import pysvg.parser
 import shutil
-from subprocess import Popen, PIPE
+import subprocess
 import sys
 
-from subprocess import call
+import pysvg.parser
 
-# Converts the svglibrary assets to png.
-# This script depends on the rsvg-convert to perform the conversion.
+MAX_WIDTH = 180
+MAX_HEIGHT = 140
 
-def main(argv):
-    rsvgConvert = "/usr/bin/rsvg-convert"
-    localRsvgConvert = "/usr/local/bin/rsvg-convert"
-    imConvert = "/usr/bin/convert"
-    localImConvert = "/usr/local/bin/convert"
-    svgDirectory = ''
-    pngDirectory = ''
 
-    if not os.path.isfile(rsvgConvert):
-        if os.path.isfile(localRsvgConvert):
-            rsvgConvert = localRsvgConvert
-        else:
-            print 'You must install librsvg2-bin to build'
-            sys.exit(1)
-    
-    if not os.path.isfile(imConvert):
-        if os.path.isfile(localImConvert):
-            imConvert = localImConvert
-        else:
-            print 'You must install ImageMagick to build'
-            sys.exit(1)
+def find_tool(*names):
+    for name in names:
+        path = shutil.which(name)
+        if path:
+            return path
+    return None
 
-    try:
-        opts, args = getopt.getopt(argv,"hi:o:",["input=","output="])
-    except getopt.GetoptError:
-        print 'convert-svg-to-png.py -i <svgDirectory> -o <pngDirectory>'
-        sys.exit(2)
 
-    for opt, arg in opts:
-        if opt == '-h':
-            print 'convert-svg-to-png.py -i <svgDirectory> -o <pngDirectory>'
-            sys.exit()
-        elif opt in ("-i", "--input"):
-            svgDirectory = arg.lstrip()
-        elif opt in ("-o", "--output"):
-            pngDirectory = arg.lstrip()
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('-i', '--input', required=True, help='SVG input directory')
+    parser.add_argument('-o', '--output', required=True, help='PNG output directory')
+    args = parser.parse_args()
 
-    print 'Input svg directory is ' + svgDirectory
-    print 'Output png directory is ' + pngDirectory
+    svg_dir = args.input.strip()
+    png_dir = args.output.strip()
 
-    MAX_WIDTH = 180
-    MAX_HEIGHT = 140
-    
-    nullout = open(os.devnull,'wb')
+    inkscape = find_tool('inkscape', 'inkscape.com')
+    magick = find_tool('magick', 'magick.exe')
+
+    if not inkscape:
+        sys.exit('Could not find inkscape on PATH; install via "scoop install inkscape"')
+    if not magick:
+        sys.exit('Could not find magick on PATH; install via "scoop install imagemagick"')
+
+    print(f'Input SVG directory: {svg_dir}')
+    print(f'Output PNG directory: {png_dir}')
+
+    os.makedirs(png_dir, exist_ok=True)
     count = 0
 
-    for i in os.listdir(svgDirectory):
-        tokens = i.split(".")
-        fname = tokens[0]
-        pngname = fname + ".png"
-        
-        inputFile = svgDirectory + "/" + i
-        outputFile = pngDirectory + "/" + pngname
-        
-        # Handle large PNGs and other files
-        if tokens[-1] == "png":
-            # Downscale with ImageMagick
-            call([imConvert, inputFile, "-resize", '%ix%i' % (MAX_WIDTH, MAX_HEIGHT), outputFile])
+    for name in sorted(os.listdir(svg_dir)):
+        ext = os.path.splitext(name)[1].lower()
+        in_path = os.path.join(svg_dir, name)
+        out_path = os.path.join(png_dir, os.path.splitext(name)[0] + '.png')
+
+        if ext == '.png':
+            subprocess.check_call([
+                magick, in_path,
+                '-resize', f'{MAX_WIDTH}x{MAX_HEIGHT}',
+                out_path,
+            ])
+            count += 1
             continue
-        elif tokens[-1] != "svg":
-            # Don't do any processing
+        if ext != '.svg':
             continue
 
-        # Handle SVGs
-        # hide stdout because pysvg.parser.parse spits out spurious warnings
-        temp = sys.stdout
-        sys.stdout = nullout
+        svg = pysvg.parser.parse(in_path)
+        try:
+            svg_height = float(svg.get_height().rstrip('px'))
+            svg_width = float(svg.get_width().rstrip('px'))
+        except (TypeError, ValueError):
+            # Some SVGs may have no explicit width/height — fall back to width.
+            svg_height = float(MAX_HEIGHT)
+            svg_width = float(MAX_WIDTH)
 
-        svg = pysvg.parser.parse(svgDirectory + i)
-        sys.stdout = temp
-        svgHeight = float(svg.get_height()[:-2])
-        svgWidth = float(svg.get_width()[:-2])
-        ratio = svgWidth / svgHeight
+        ratio = svg_width / svg_height if svg_height else 1.0
+        height_bound_by_width = MAX_WIDTH / ratio if ratio else MAX_HEIGHT
 
-        heightBoundByWidth = MAX_WIDTH / ratio
-
-
-        if heightBoundByWidth > MAX_HEIGHT:
-            call([rsvgConvert, "-h", str(MAX_HEIGHT), inputFile, "-o", outputFile])
+        if height_bound_by_width > MAX_HEIGHT:
+            size_args = ['--export-height', str(MAX_HEIGHT)]
         else:
-            call([rsvgConvert, "-w", str(MAX_WIDTH), inputFile, "-o", outputFile])
+            size_args = ['--export-width', str(MAX_WIDTH)]
 
-        count = count + 1
+        subprocess.check_call([
+            inkscape,
+            *size_args,
+            '--export-type=png',
+            f'--export-filename={out_path}',
+            in_path,
+        ])
+        count += 1
 
-    nullout.close()
-    
-    print 'Converted {0} svgs to png'.format(count)
+    print(f'Converted {count} files to PNG')
 
-if __name__ == "__main__":
-   main(sys.argv[1:])
+
+if __name__ == '__main__':
+    main()

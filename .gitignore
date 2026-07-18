@@ -28,6 +28,16 @@
 .idea/modules.xml
 /android/ScratchJr/.idea/caches
 /android/ScratchJr/.idea/modules.xml
+
+# Modern Android Studio churn
+/android/ScratchJr/.idea/.gitignore
+/android/ScratchJr/.idea/AndroidProjectSystem.xml
+/android/ScratchJr/.idea/deploymentTargetSelector.xml
+/android/ScratchJr/.idea/migrations.xml
+
+# Build log from local Gradle runs
+/build.log
+
 ios/Pods
 google-services.json
 GoogleService-Info.plist

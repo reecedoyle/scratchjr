@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="org.scratchjr.android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.INTERNET"/>
@@ -19,8 +18,6 @@
         android:theme="@style/AppTheme"
         android:hardwareAccelerated="true"
         android:resizeableActivity="false">
-
-        <meta-data android:name="firebase_analytics_collection_deactivated" android:value="${disableAnalytics}" />
 
         <provider android:name="ShareContentProvider"
                   android:grantUriPermissions="true"
@@ -75,15 +72,6 @@
             </intent-filter>
         </activity>
 
-        <receiver android:name="com.google.android.gms.analytics.AnalyticsReceiver"
-            android:enabled="true">
-            <intent-filter>
-                <action android:name="com.google.android.gms.analytics.ANALYTICS_DISPATCH" />
-            </intent-filter>
-        </receiver>
-        <service android:name="com.google.android.gms.analytics.AnalyticsService"
-            android:enabled="true"
-            android:exported="false"/>
     </application>
 
 </manifest>

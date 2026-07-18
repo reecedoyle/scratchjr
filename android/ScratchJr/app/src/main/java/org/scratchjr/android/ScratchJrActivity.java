@@ -27,14 +27,11 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.webkit.ConsoleMessage;
 import android.webkit.CookieManager;
-import android.webkit.CookieSyncManager;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.RelativeLayout;
-
-import com.google.firebase.analytics.FirebaseAnalytics;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -105,9 +102,6 @@ public class ScratchJrActivity
     public int micPermissionResult = PackageManager.PERMISSION_DENIED;
     public int readExtPermissionResult = PackageManager.PERMISSION_DENIED;
 
-    /* Firebase analytics tracking */
-    private FirebaseAnalytics _FirebaseAnalytics;
-
     /**
      * Project uri that need to be imported.
      */
@@ -166,8 +160,6 @@ public class ScratchJrActivity
         if (it != null && it.getData() != null) {
             receiveProject(it.getData());
         }
-
-        _FirebaseAnalytics = FirebaseAnalytics.getInstance(this);
 
         // When System UI bar is displayed, wait one second and then re-assert immersive mode.
         getWindow().getDecorView().setOnSystemUiVisibilityChangeListener(new OnSystemUiVisibilityChangeListener() {
@@ -286,7 +278,6 @@ public class ScratchJrActivity
             @Override
             public void run() {
                 _webView.onResume();
-                CookieSyncManager.getInstance().startSync();
             }
         });
         runJavaScript("if (typeof(ScratchJr) !== 'undefined') ScratchJr.onResume();");
@@ -300,7 +291,6 @@ public class ScratchJrActivity
             @Override
             public void run() {
                 _webView.onPause();
-                CookieSyncManager.getInstance().stopSync();
             }
         });
         _databaseManager.close();
@@ -415,8 +405,6 @@ public class ScratchJrActivity
         } else {
             cookieManager.setAcceptCookie(true);
         }
-        CookieSyncManager.createInstance(this);
-
         /* Object exposed to the JavaScript that makes it easy to bridge JavaScript and Java */
         JavaScriptDirectInterface javaScriptDirectInterface = new JavaScriptDirectInterface(this);
         _webView.addJavascriptInterface(javaScriptDirectInterface, "AndroidInterface");
@@ -438,13 +426,7 @@ public class ScratchJrActivity
 
             @Override
             public void onPageFinished(WebView view, String url) {
-                // Sync cookies
-                CookieSyncManager.getInstance().sync();
-
-                // Track page load
-                String[] parts = url.split("/");
-                String page = parts[parts.length - 1].split("\\?")[0];
-                _FirebaseAnalytics.setCurrentScreen((Activity) view.getContext(), page, null);
+                CookieManager.getInstance().flush();
             }
         });
         _webView.requestFocus(View.FOCUS_DOWN);
@@ -526,27 +508,15 @@ public class ScratchJrActivity
      * @param label
      */
     public void logAnalyticsEvent(String category, String action, String label) {
-        Bundle params = new Bundle();
-        params.putString(FirebaseAnalytics.Param.ITEM_CATEGORY, category);
-        params.putString(FirebaseAnalytics.Param.ITEM_NAME, label);
-        _FirebaseAnalytics.logEvent(action, params);
+        // No-op: analytics removed in this build.
     }
 
-    /**
-     * Record the preferred place for the user: home, school, other, noanswer
-     * @param place
-     */
     public void setAnalyticsPlacePref(String place) {
-        _FirebaseAnalytics.setUserProperty("place_preference", place);
+        // No-op: analytics removed in this build.
     }
 
-    /**
-     * Record a user property
-     * @param key like "school"
-     * @param value like "Central High"
-     */
     public void setAnalyticsPref(String key, String value) {
-        _FirebaseAnalytics.setUserProperty(key, value);
+        // No-op: analytics removed in this build.
     }
 
     public void translateAndScaleRectToContainerCoords(RectF rect, float devicePixelRatio) {

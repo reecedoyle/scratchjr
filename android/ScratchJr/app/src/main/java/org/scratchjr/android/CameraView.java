@@ -27,7 +27,6 @@ import android.widget.RelativeLayout;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.core.CameraInfoUnavailableException;
 import androidx.camera.core.CameraSelector;
-import androidx.camera.core.ExperimentalUseCaseGroup;
 import androidx.camera.core.ImageCapture;
 import androidx.camera.core.Preview;
 import androidx.camera.lifecycle.ProcessCameraProvider;
@@ -95,9 +94,6 @@ public class CameraView extends RelativeLayout {
         public void onDisplayRemoved(int displayId) {
         }
 
-        // The androidx.camera.core.Preview.setTargetRotation declaration is opt-in
-        // and its usage should be marked with @androidx.camera.core.ExperimentalUseCaseGroup
-        @ExperimentalUseCaseGroup
         @Override
         public void onDisplayChanged(int displayId) {
             if (displayId == _displayId) {
